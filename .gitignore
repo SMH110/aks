@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+bin/
+obj/
+.vs/
+*.user
+
+.env
+.env.*
+!.env.example
