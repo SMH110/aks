@@ -2,6 +2,7 @@ targetScope = 'subscription'
 
 param location string = 'uksouth'
 param resourceGroupName string = 'rg-smh-aks-uk-dev'
+param developerPrincipalId string
 
 resource labResourceGroup 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   name: resourceGroupName
@@ -31,6 +32,17 @@ module dataStore './modules/cosmos-db.bicep' = {
     tags: labResourceGroup.tags
   }
 }
+
+module developerAccess './modules/developer-access.bicep' = {
+  name: 'developer-access'
+  scope: labResourceGroup
+  params: {
+    developerPrincipalId: developerPrincipalId
+    serviceBusNamespaceName: messaging.outputs.namespaceName
+    queueName: messaging.outputs.queueName
+    cosmosAccountName: dataStore.outputs.accountName
+  }
+} 
 
 
 
