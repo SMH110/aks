@@ -22,7 +22,23 @@ module messaging './modules/service-bus.bicep' = {
   }
 }
 
+
+module dataStore './modules/cosmos-db.bicep' = {
+  name: 'cosmos-db'
+  scope: labResourceGroup
+  params: {
+    location: location
+    tags: labResourceGroup.tags
+  }
+}
+
+
+
 output resourceGroupId string = labResourceGroup.id
 output serviceBusNamespace string = messaging.outputs.namespaceName
 output serviceBusHost string = messaging.outputs.hostName
 output serviceBusQueue string = messaging.outputs.queueName
+output cosmosAccountName string = dataStore.outputs.accountName
+output cosmosEndpoint string = dataStore.outputs.endpoint
+output cosmosDatabaseName string = dataStore.outputs.databaseName
+
