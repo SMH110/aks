@@ -13,4 +13,16 @@ resource labResourceGroup 'Microsoft.Resources/resourceGroups@2025-04-01' = {
   }
 }
 
+module messaging './modules/service-bus.bicep' = {
+  name: 'service-bus'
+  scope: labResourceGroup
+  params: {
+    location: location
+    tags: labResourceGroup.tags
+  }
+}
+
 output resourceGroupId string = labResourceGroup.id
+output serviceBusNamespace string = messaging.outputs.namespaceName
+output serviceBusHost string = messaging.outputs.hostName
+output serviceBusQueue string = messaging.outputs.queueName
