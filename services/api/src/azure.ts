@@ -31,3 +31,8 @@ export const serviceBus = new ServiceBusClient(
 export const sender = serviceBus.createSender(
   required("SERVICE_BUS_QUEUE"),
 );
+
+
+export const runs = cosmos
+  .database(required("COSMOS_DATABASE"))
+  .container("runs");

@@ -1,6 +1,22 @@
 import express, { type ErrorRequestHandler } from "express";
 import { randomUUID } from "node:crypto";
-import { jobs, sender } from "./azure.js";
+import { jobs, runs, sender } from "./azure.js";
+
+
+interface JobRecord {
+  id: string;
+  jobId: string;
+  requestedRuns: number;
+  status: "dispatching" | "queued" | "dispatch_failed";
+}
+
+interface RunResult {
+  runId: string;
+  runNumber: number;
+  result: number;
+  completedAt: string;
+}
+
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -152,10 +168,79 @@ const errorHandler: ErrorRequestHandler = (
     return;
   }
 
-  response.status(503).json({
-    error: "Unable to create the job. Check the API logs.",
-  });
+ response.status(503).json({
+  error: "Unable to complete the request. Check the API logs.",
+});
 };
+
+
+app.get("/jobs/:jobId", async (request, response) => {
+  const { jobId } = request.params;
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (typeof jobId !== "string" || !uuidPattern.test(jobId)) {
+    response.status(400).json({
+      error: "jobId must be a UUID.",
+    });
+    return;
+  }
+
+  // Read the job using its document ID and partition key.
+  const { resource: job } = await jobs
+    .item(jobId, jobId)
+    .read<JobRecord>();
+
+  if (!job) {
+    response.status(404).json({
+      error: "Job not found.",
+    });
+    return;
+  }
+
+  // Retrieve completed results belonging to this job.
+  const { resources: results } = await runs.items
+    .query<RunResult>(
+      {
+        query: `
+          SELECT c.id AS runId, c.runNumber, c.result, c.completedAt
+          FROM c
+          WHERE c.jobId = @jobId AND c.status = "completed"
+        `,
+        parameters: [
+          { name: "@jobId", value: jobId },
+        ],
+      },
+      { partitionKey: jobId },
+    )
+    .fetchAll();
+
+  results.sort((a, b) => a.runNumber - b.runNumber);
+
+  const completedRuns = results.length;
+
+  const status =
+    completedRuns === job.requestedRuns
+      ? "completed"
+      : completedRuns > 0
+        ? "partially_completed"
+        : "pending";
+
+  response.json({
+    jobId: job.jobId,
+    requestedRuns: job.requestedRuns,
+    completedRuns,
+    remainingRuns: Math.max(
+      0,
+      job.requestedRuns - completedRuns,
+    ),
+    status,
+    dispatchStatus: job.status,
+    results,
+  });
+});
+
 
 app.use(errorHandler);
 
