@@ -1,0 +1,20 @@
+:host { display: block; min-height: 100vh; background: #f4f6f9; color: #172538; font: 16px/1.5 system-ui, sans-serif; }
+main { max-width: 720px; margin: auto; padding: 40px 24px; }
+h1 { margin: 0; font-size: 2rem; }
+h2 { margin-top: 0; }
+.eyebrow { color: #3159c7; font-size: .8rem; font-weight: 700; letter-spacing: .15em; }
+form, section { padding: 24px; margin-top: 24px; background: white; border: 1px solid #dce2eb; border-radius: 12px; }
+form { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+label, small { display: block; }
+label { font-weight: 600; }
+small, .muted, .job-id { color: #566477; }
+input { display: block; box-sizing: border-box; width: 140px; margin: 8px 0; padding: 10px 12px; border: 1px solid #8796ac; border-radius: 6px; font: inherit; }
+button { padding: 11px 18px; border: 0; border-radius: 6px; background: #3159c7; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 3px solid #172538; outline-offset: 3px; }
+.job-id { overflow-wrap: anywhere; font-family: monospace; }
+progress { display: block; width: 100%; accent-color: #3159c7; }
+table { width: 100%; margin-top: 24px; border-collapse: collapse; text-align: left; }
+caption { text-align: left; font-weight: 600; margin-bottom: 8px; }
+th, td { padding: 10px 8px; border-bottom: 1px solid #dce2eb; }
+.warning { padding: 12px; border-radius: 6px; background: #fff1d6; color: #704800; }
