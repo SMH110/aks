@@ -1,0 +1,16 @@
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location ~ ^/jobs(?:/|$) {
+        proxy_pass http://${API_UPSTREAM};
+        proxy_set_header Host $host;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
