@@ -1,0 +1,62 @@
+name: simlab
+
+services:
+  ui:
+    image: simlab-ui:dev
+    build:
+      context: ./services/ui
+    ports:
+      - "8080:80"
+    environment:
+      API_UPSTREAM: api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+        restart: true
+
+  api:
+    image: simlab-api:local
+    build:
+      context: ./services/api
+      target: local
+    user: "${SIMLAB_USER:?Set SIMLAB_USER first}"
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./services/api/.env
+    environment:
+      PORT: "3000"
+      AZURE_CONFIG_DIR: /azure-config
+    volumes:
+      - type: bind
+        source: "${SIMLAB_AZURE_CONFIG_DIR:?Set SIMLAB_AZURE_CONFIG_DIR first}"
+        target: /azure-config
+        bind:
+          create_host_path: false
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  worker:
+    image: simlab-worker:local
+    build:
+      context: ./services/worker
+      target: local
+    user: "${SIMLAB_USER:?Set SIMLAB_USER first}"
+    env_file:
+      - ./services/api/.env
+    environment:
+      AZURE_CONFIG_DIR: /azure-config
+    volumes:
+      - type: bind
+        source: "${SIMLAB_AZURE_CONFIG_DIR:?Set SIMLAB_AZURE_CONFIG_DIR first}"
+        target: /azure-config
+        bind:
+          create_host_path: false
