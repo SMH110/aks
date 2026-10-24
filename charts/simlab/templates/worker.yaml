@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+
+  selector:
+    matchLabels:
+      app: worker
+
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+
+      containers:
+        - name: worker
+          image: simlab-worker:local
+          imagePullPolicy: Never
+
+          envFrom:
+            - configMapRef:
+                name: simlab-config
+
+          env:
+            - name: AZURE_CONFIG_DIR
+              value: /azure-config
+
+          volumeMounts:
+            - name: azure-config
+              mountPath: /azure-config
+
+      volumes:
+        - name: azure-config
+          hostPath:
+            path: /azure-config
+            type: Directory

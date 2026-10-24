@@ -1,0 +1,5 @@
+apiVersion: v2
+name: simlab
+description: SimLab UI, API and worker
+type: application
+version: 0.1.0
