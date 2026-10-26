@@ -44,6 +44,22 @@ module developerAccess './modules/developer-access.bicep' = {
   }
 } 
 
+module containerRegistry './modules/container-registry.bicep' = {
+  name: 'container-registry'
+  scope: labResourceGroup
+  params: {
+    registryName: 'acrsmhaksukdev${uniqueString(labResourceGroup.id)}'
+    location: location
+    tags: {
+      project: 'simlab'
+      environment: 'dev'
+      managedBy: 'bicep'
+    }
+  }
+}
+
+
+
 
 
 output resourceGroupId string = labResourceGroup.id
@@ -54,3 +70,5 @@ output cosmosAccountName string = dataStore.outputs.accountName
 output cosmosEndpoint string = dataStore.outputs.endpoint
 output cosmosDatabaseName string = dataStore.outputs.databaseName
 
+output containerRegistryName string = containerRegistry.outputs.registryName
+output containerRegistryLoginServer string = containerRegistry.outputs.loginServer

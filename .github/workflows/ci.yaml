@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ui:
+    name: UI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: services/ui/package-lock.json
+
+      - name: Install UI dependencies
+        working-directory: services/ui
+        run: npm ci
+
+      - name: Run UI unit tests
+        working-directory: services/ui
+        run: npm test -- --watch=false
+
+      - name: Build the UI
+        working-directory: services/ui
+        run: npm run build
+
+      - name: Build the UI Docker image
+        run: docker build --tag simlab-ui:ci services/ui
+
+  api:
+    name: API
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: npm ci
+
+      - name: Compile the API and check TypeScript types
+        working-directory: services/api
+        run: npm run build
+
+      - name: Build the API Docker image
+        run: docker build --target production --tag simlab-api:ci services/api
+
+  worker:
+    name: Worker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore worker dependencies
+        run: dotnet restore services/worker/SimLab.Worker.csproj
+
+      - name: Build the worker
+        run: >-
+          dotnet build services/worker/SimLab.Worker.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Build the worker Docker image
+        run: docker build --target production --tag simlab-worker:ci services/worker
+
+  infrastructure:
+    name: Infrastructure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Bicep
+        run: |
+          az config set bicep.use_binary_from_path=false
+          az bicep install --version v0.48.1
+
+      - name: Compile the Bicep template and its modules
+        run: az bicep build --file infra/bootstrap.bicep --stdout > "$RUNNER_TEMP/bootstrap.json"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v4.3.1
+
+      - name: Lint the Helm chart
+        run: helm lint charts/simlab --strict --kube-version 1.37.0
+
+      - name: Render the Helm chart
+        run: >-
+          helm template simlab charts/simlab
+          --namespace simlab
+          --kube-version 1.37.0
+          > "$RUNNER_TEMP/simlab-rendered.yaml"
